@@ -1,46 +1,28 @@
 import streamlit as st
-import pickle
-import numpy as np
-import pandas as pd
+from models import get_trained_model  # Importer le modèle entraîné
 
-# Charger le modèle entraîné
-@st.cache_resource
-def load_model():
-    with open("credit_scoring_model.pkl", "rb") as file:
-        model = pickle.load(file)
-    return model
+# Charger le modèle
+st.title("Application de Scoring de Crédit")
 
-model = load_model()
+model = get_trained_model()  # Utilise le modèle entraîné directement
 
-# Titre de l'application
-st.title("🧮 Crédit Scoring - Prédiction de Risque")
+# Interface utilisateur pour entrer les données
+age = st.number_input("Âge", min_value=18, max_value=80, value=30)
+revenu = st.number_input("Revenu mensuel", min_value=1000, max_value=10000, value=3000)
+dette = st.number_input("Dette totale", min_value=0, max_value=15000, value=2000)
+historique_credit = st.selectbox("Historique de crédit", ["Mauvais", "Moyen", "Bon"])
+nombre_cartes = st.number_input("Nombre de cartes de crédit", min_value=0, max_value=10, value=2)
 
-# Formulaire pour entrer les données du client
-st.sidebar.header("📋 Informations Client")
-age = st.sidebar.slider("Âge", 18, 80, 30)
-revenu = st.sidebar.number_input("Revenu mensuel (en $)", min_value=0, value=3000, step=500)
-dette = st.sidebar.number_input("Dette actuelle (en $)", min_value=0, value=5000, step=1000)
-historique_credit = st.sidebar.selectbox("Historique de crédit", ["Mauvais", "Moyen", "Bon"])
-nombre_cartes = st.sidebar.slider("Nombre de cartes de crédit", 0, 10, 2)
-
-# Transformation des données
+# Encodage de la variable historique de crédit
 historique_map = {"Mauvais": 0, "Moyen": 1, "Bon": 2}
-features = np.array([[age, revenu, dette, historique_map[historique_credit], nombre_cartes]])
+historique_credit = historique_map[historique_credit]
 
-# Prédiction du modèle
-if st.sidebar.button("📊 Prédire le score"):
-    prediction = model.predict(features)[0]
-    proba = model.predict_proba(features)[0]
+# Prédiction
+if st.button("Prédire l'acceptation du crédit"):
+    input_data = [[age, revenu, dette, historique_credit, nombre_cartes]]
+    prediction = model.predict(input_data)[0]
 
-    # Affichage des résultats
-    st.subheader("📌 Résultat de la Prédiction")
     if prediction == 1:
-        st.success(f"✅ Crédit approuvé avec une probabilité de {proba[1]*100:.2f}%")
+        st.success("✅ Crédit accepté !")
     else:
-        st.error(f"❌ Crédit refusé avec une probabilité de {proba[0]*100:.2f}%")
-
-    # Graphique des probabilités
-    st.subheader("📊 Probabilités du Modèle")
-    df_proba = pd.DataFrame({"Classe": ["Refusé", "Approuvé"], "Probabilité": proba})
-    st.bar_chart(df_proba.set_index("Classe"))
-
+        st.error("❌ Crédit refusé.")
